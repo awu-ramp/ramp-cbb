@@ -10,23 +10,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #f7f7f5;
-      --surface: #fff;
-      --border: #e8e8e6;
-      --text: #1a1a1a;
-      --text-muted: #888;
-      --text-faint: #bbb;
-      --input-bg: #fff;
-      --bubble-assistant-bg: #fff;
-      --bubble-assistant-border: #e8e8e6;
-      --bubble-user-bg: #000;
-      --bubble-user-color: #fff;
-      --avatar-user-bg: #e8e8e6;
-      --avatar-user-color: #000;
-      --tab-bg: #fafaf8;
-    }
-
-    html.dark {
       --bg: #0f0f0f;
       --surface: #1a1a1a;
       --border: #2e2e2e;
@@ -114,17 +97,7 @@
     }
     .copy-btn:hover { opacity: 1; }
 
-    .theme-toggle {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      opacity: 0.6;
-      transition: opacity 0.15s;
-      padding: 2px 4px;
-      line-height: 1;
-    }
-    .theme-toggle:hover { opacity: 1; }
+
 
     /* ── auth background canvas ── */
     #auth-canvas {
@@ -163,12 +136,8 @@
       color: var(--text);
     }
 
-    html.dark .auth-card {
-      box-shadow: 0 4px 32px rgba(0,0,0,0.6);
-    }
 
     .auth-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; text-transform: lowercase; }
-    html:not(.dark) .auth-card h2 { text-shadow: 2px 2px 0px #4a5200, 0 0 8px rgba(150,160,0,0.4); }
     .auth-card p { text-transform: lowercase; }
     .tab { text-transform: lowercase; }
     .btn-primary { text-transform: lowercase; }
@@ -439,16 +408,11 @@
     .model-pill:hover { border-color: #888; color: var(--text); }
 
     .model-pill.active {
-      background: #000;
-      color: #fff;
-      border-color: #000;
-    }
-
-    html.dark .model-pill.active {
       background: #e8ff47;
       color: #000;
       border-color: #e8ff47;
     }
+
 
     .model-pill .pill-tag {
       font-size: 10px;
@@ -549,6 +513,10 @@
 
     /* ── markdown rendering ── */
     .bubble.md { white-space: normal; }
+    .bubble.md ul, .bubble.md ol { margin: 4px 0 4px 20px; }
+    .bubble.md li { margin-bottom: 2px; }
+    .bubble.md p { margin-bottom: 6px; }
+    .bubble.md p:last-child { margin-bottom: 0; }
     .bubble.md p { margin-bottom: 10px; }
     .bubble.md p:last-child { margin-bottom: 0; }
     .bubble.md ul, .bubble.md ol { margin: 8px 0 8px 20px; }
@@ -578,7 +546,6 @@
       line-height: 1.5;
       position: relative;
     }
-    html:not(.dark) .bubble.md pre { background: #1e1e1e; }
 
     .bubble.md code:not(pre code) {
       background: var(--border);
@@ -657,7 +624,6 @@
       <span class="key-badge" id="key-display"></span>
       <button class="copy-btn" id="copy-btn" onclick="copyKey()" title="copy full key">📋</button>
     </div>
-    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="toggle dark mode">🌙</button>
   </div>
 </header>
 
@@ -760,25 +726,8 @@
     p.classList.toggle("active", p.dataset.model === selectedModel);
   });
 
-  // ── theme ──────────────────────────────────────────────────────────
-  var html = document.documentElement;
-
-  function applyTheme(dark) {
-    html.classList.toggle("dark", dark);
-    var btn = document.getElementById("theme-toggle");
-    if (btn) btn.textContent = dark ? "☀️" : "🌙";
-  }
-
-  function toggleTheme() {
-    var isDark = !html.classList.contains("dark");
-    localStorage.setItem("tc_theme", isDark ? "dark" : "light");
-    applyTheme(isDark);
-  }
-
-  (function() {
-    var saved = localStorage.getItem("tc_theme");
-    applyTheme(saved ? saved === "dark" : true);
-  })();
+  // dark mode always on
+  document.documentElement.classList.add("dark");
 
   // ── state ───────────────────────────────────────────────────────────
   var apiKey = localStorage.getItem("tc_api_key") || "";
@@ -904,28 +853,64 @@
 
   // ── markdown ────────────────────────────────────────────────────────
   function renderMarkdown(text) {
-    var html = text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/```[\w]*[\s\S]*?```/g, function(m) {
-        var lang = (m.match(/^```(\w*)/) || [])[1] || "";
-        var code = m.replace(/^```\w*\n?/, "").replace(/```$/, "").trim();
-        return '<pre data-lang="' + lang + '"><button class="copy-code-btn" onclick="copyCode(this)">copy</button><code>' + code + "</code></pre>";
-      })
+    // extract and protect code blocks first
+    var codeBlocks = [];
+    text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, function(_, lang, code) {
+      var idx = codeBlocks.length;
+      codeBlocks.push('<pre data-lang="' + lang + '"><button class="copy-code-btn" onclick="copyCode(this)">copy</button><code>'
+        + code.trim().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        + '</code></pre>');
+      return "\x00CODE" + idx + "\x00";
+    });
+
+    // escape html
+    text = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+    // inline formatting
+    text = text
       .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-      .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
-      .replace(/^\s*[-*] (.+)$/gm, "<li>$1</li>")
-      .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-      .replace(/\n\n+/g, "</p><p>")
-      .replace(/\n/g, "<br>");
-    return "<p>" + html + "</p>";
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    // process line by line
+    var lines = text.split("\n");
+    var out = [];
+    var inUl = false, inOl = false;
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var ulMatch = line.match(/^\s*[-*] (.+)$/);
+      var olMatch = line.match(/^\d+\.\s+(.+)$/);
+      var h3 = line.match(/^### (.+)$/);
+      var h2 = line.match(/^## (.+)$/);
+      var h1 = line.match(/^# (.+)$/);
+      var bq = line.match(/^> (.+)$/);
+
+      if (ulMatch) {
+        if (!inUl) { if (inOl) { out.push("</ol>"); inOl=false; } out.push("<ul>"); inUl=true; }
+        out.push("<li>" + ulMatch[1] + "</li>");
+      } else if (olMatch) {
+        if (!inOl) { if (inUl) { out.push("</ul>"); inUl=false; } out.push("<ol>"); inOl=true; }
+        out.push("<li>" + olMatch[1] + "</li>");
+      } else {
+        if (inUl) { out.push("</ul>"); inUl=false; }
+        if (inOl) { out.push("</ol>"); inOl=false; }
+        if (h1) out.push("<h1>" + h1[1] + "</h1>");
+        else if (h2) out.push("<h2>" + h2[1] + "</h2>");
+        else if (h3) out.push("<h3>" + h3[1] + "</h3>");
+        else if (bq) out.push("<blockquote>" + bq[1] + "</blockquote>");
+        else if (line.trim() === "") out.push("<br>");
+        else out.push("<p>" + line + "</p>");
+      }
+    }
+    if (inUl) out.push("</ul>");
+    if (inOl) out.push("</ol>");
+
+    var result = out.join("");
+    // restore code blocks
+    result = result.replace(/\x00CODE(\d+)\x00/g, function(_, idx) { return codeBlocks[parseInt(idx)]; });
+    return result;
   }
 
   function copyCode(btn) {
