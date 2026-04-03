@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/static/pixel.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ramp Build Board</title>
   <style>
@@ -153,7 +154,7 @@
       border: 1px solid var(--border);
       border-top: 3px solid #e8ff47;
       border-radius: 16px;
-      padding: 40px;
+      padding: 32px 40px;
       width: 100%;
       max-width: 400px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
@@ -166,7 +167,8 @@
       box-shadow: 0 4px 32px rgba(0,0,0,0.6);
     }
 
-    .auth-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; text-transform: lowercase; }
+    .auth-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; text-transform: lowercase; }
+    html:not(.dark) .auth-card h2 { text-shadow: 2px 2px 0px #4a5200, 0 0 8px rgba(150,160,0,0.4); }
     .auth-card p { text-transform: lowercase; }
     .tab { text-transform: lowercase; }
     .btn-primary { text-transform: lowercase; }
@@ -177,24 +179,52 @@
 
     .tabs {
       display: flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
+      gap: 10px;
       margin-bottom: 24px;
     }
 
     .tab {
       flex: 1;
-      padding: 10px;
-      font-size: 13px;
-      font-weight: 500;
+      padding: 10px 8px;
+      font-size: 10px;
+      font-weight: 400;
       cursor: pointer;
-      background: var(--tab-bg);
+      font-family: 'Press Start 2P', monospace;
+      letter-spacing: 0.5px;
       border: none;
-      color: var(--text-muted);
-      transition: all 0.15s;
+      color: #4a3000;
+      background: #e8ff47;
+      /* pixel art button effect */
+      box-shadow:
+        inset -3px -3px 0px #9aaa00,
+        inset 3px 3px 0px #f8ff9a;
+      border-radius: 2px;
+      transition: box-shadow 0.08s, transform 0.08s;
+      position: relative;
     }
-    .tab.active { background: #000; color: #fff; }
+
+    .tab:not(.active) {
+      color: rgba(255,255,255,0.6);
+      background: #2a2a2a;
+      box-shadow:
+        inset -3px -3px 0px #111,
+        inset 3px 3px 0px #444;
+    }
+
+    .tab.active {
+      color: #2a1a00;
+      background: #e8ff47;
+      box-shadow:
+        inset -3px -3px 0px #9aaa00,
+        inset 3px 3px 0px #f8ff9a;
+    }
+
+    .tab:active {
+      box-shadow:
+        inset 3px 3px 0px #9aaa00,
+        inset -3px -3px 0px #f8ff9a;
+      transform: translate(1px, 1px);
+    }
 
     input {
       width: 100%;
@@ -213,35 +243,30 @@
     .btn-primary { display: none; }
 
     .pixel-enter {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 12px;
+      display: block;
+      margin-top: 8px;
       cursor: pointer;
-      opacity: 0.7;
-      transition: opacity 0.15s;
       background: none;
       border: none;
       width: 100%;
       padding: 0;
+      text-align: center;
     }
-    .pixel-enter:hover { opacity: 1; }
     .pixel-enter:disabled { opacity: 0.3; cursor: not-allowed; }
     .pixel-enter-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-family: inherit;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 16px;
+      color: #e8ff47;
+      text-shadow: 2px 2px 0px #4a5200, 0 0 10px rgba(232,255,71,0.6), 0 0 24px rgba(232,255,71,0.3);
+      letter-spacing: 2px;
+      transition: text-shadow 0.15s;
+      display: inline-block;
     }
-    .pixel-enter-arrow {
-      font-size: 12px;
-      color: var(--text-faint);
+    .pixel-enter:hover .pixel-enter-label {
+      text-shadow: 2px 2px 0px #4a5200, 0 0 16px rgba(232,255,71,0.9), 0 0 32px rgba(232,255,71,0.5);
     }
-    .pixel-enter-icon {
-      width: 36px;
-      height: 36px;
-      image-rendering: pixelated;
-    }
+    .pixel-enter-icon { display: none; }
+    .pixel-enter-arrow { display: none; }
 
     .auth-error {
       font-size: 13px;
@@ -635,9 +660,8 @@
 <!-- Auth gate -->
 <div id="auth-screen">
   <div class="auth-card" data-bg-card>
-    <h2>ready to build?</h2>
-    <p>sign in with your api key, or register if you're new.</p>
-
+    <h2 style="font-family: 'Press Start 2P', monospace; font-size: 18px; font-weight: 400; color: #e8ff47; text-shadow: 2px 2px 0px #4a5200, 0 0 12px rgba(232,255,71,0.6); letter-spacing: 1px; line-height: 1.6; margin-bottom: 8px;">ready to build?</h2>
+    
     <div class="tabs">
       <button class="tab active" onclick="switchTab('login')">i have a key</button>
       <button class="tab" onclick="switchTab('register')">new here</button>
@@ -646,9 +670,11 @@
     <div id="login-form">
       <input id="login-key" type="text" placeholder="paste your api key (tc-...)" />
       <button class="pixel-enter" onclick="login()" id="login-btn">
-        <span class="pixel-enter-label">click to enter</span>
+        <div class="pixel-enter-left">
+          <img src="/static/pixel.png" class="pixel-enter-icon" alt="enter" />
+          <span class="pixel-enter-label">enter</span>
+        </div>
         <span class="pixel-enter-arrow">→</span>
-        <img src="/static/pixel.png" class="pixel-enter-icon" alt="enter" />
       </button>
     </div>
 
@@ -656,15 +682,16 @@
       <input id="reg-name" type="text" placeholder="your name" />
       <input id="reg-email" type="email" placeholder="your email" />
       <button class="pixel-enter" onclick="register()" id="register-btn">
-        <span class="pixel-enter-label">get my key</span>
+        <div class="pixel-enter-left">
+          <img src="/static/pixel.png" class="pixel-enter-icon" alt="enter" />
+          <span class="pixel-enter-label">get my key</span>
+        </div>
         <span class="pixel-enter-arrow">→</span>
-        <img src="/static/pixel.png" class="pixel-enter-icon" alt="enter" />
       </button>
     </div>
 
     <div class="auth-error" id="auth-error"></div>
-    <p style="margin-top: 16px; font-size: 12px; color: var(--text-faint);">have fun! ٩(^ᗜ^ )و</p>
-    <div style="margin-top: 10px;"><span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(232,255,71,0.08); border: 1px solid rgba(232,255,71,0.2); border-radius: 99px; padding: 3px 10px; font-size: 10px; color: #e8ff47;">⚡ powered by Ramp</span></div>
+    <div style="margin-top: 8px; text-align: center;"><span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(232,255,71,0.08); border: 1px solid rgba(232,255,71,0.2); border-radius: 99px; padding: 2px 8px; font-size: 10px; color: #e8ff47;">⚡ powered by Ramp</span></div>
   </div>
 </div>
 
@@ -784,7 +811,7 @@
     setError("");
     var btn = document.getElementById("register-btn");
     btn.disabled = true;
-    btn.querySelector(".pixel-enter-label").textContent = "registering…";
+    btn.querySelector(".pixel-enter-label").textContent = "loading...";
     fetch("/register", {
       method: "POST",
       headers: { "content-type": "application/json" },
