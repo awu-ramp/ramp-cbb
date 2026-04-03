@@ -150,6 +150,7 @@
     .auth-card {
       background: var(--surface);
       border: 1px solid var(--border);
+      border-top: 3px solid #e8ff47;
       border-radius: 16px;
       padding: 40px;
       width: 100%;
@@ -210,17 +211,17 @@
 
     .btn-primary {
       width: 100%;
-      padding: 12px;
-      background: #000;
-      color: #fff;
-      border: none;
+      padding: 9px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: border-color 0.15s, color 0.15s;
     }
-    .btn-primary:hover { opacity: 0.8; }
+    .btn-primary:hover { border-color: #888; }
     .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .auth-error {
@@ -602,7 +603,7 @@
     <span class="subtitle">emerging talent</span>
   </div>
   <div class="header-right">
-    <a href="/leaderboard" class="leaderboard-link">🏆 leaderboard</a>
+    <a href="/leaderboard" class="leaderboard-link">leaderboard</a>
     <div class="key-widget" id="key-widget">
       <span class="key-label">api key</span>
       <span class="key-badge" id="key-display"></span>
@@ -635,6 +636,8 @@
     </div>
 
     <div class="auth-error" id="auth-error"></div>
+    <p style="margin-top: 16px; font-size: 12px; color: var(--text-faint);">have fun! ٩(^ᗜ^ )و</p>
+    <div style="margin-top: 10px;"><span style="display: inline-flex; align-items: center; gap: 5px; background: rgba(232,255,71,0.08); border: 1px solid rgba(232,255,71,0.2); border-radius: 99px; padding: 3px 10px; font-size: 10px; color: #e8ff47;">⚡ powered by Ramp</span></div>
   </div>
 </div>
 
@@ -716,8 +719,7 @@
 
   (function() {
     var saved = localStorage.getItem("tc_theme");
-    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    applyTheme(saved ? saved === "dark" : prefersDark);
+    applyTheme(saved ? saved === "dark" : true);
   })();
 
   // ── state ───────────────────────────────────────────────────────────
