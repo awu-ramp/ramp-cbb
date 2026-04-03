@@ -1035,8 +1035,7 @@
           return reader.read().then(function(result) {
             if (result.done) return;
             var chunk = decoder.decode(result.value, { stream: true });
-            chunk.split("
-").forEach(function(line) {
+            chunk.split("\n").forEach(function(line) {
               if (!line.startsWith("data: ")) return;
               try {
                 var evt = JSON.parse(line.slice(6).trim());
@@ -1144,7 +1143,8 @@
         return reader.read().then(function(result) {
           if (result.done) return;
           var chunk = decoder.decode(result.value, { stream: true });
-          var chunkLines = chunk.split("\n");
+          var chunkLines = chunk.split("
+");
           chunkLines.forEach(function(line) {
             if (!line.startsWith("data: ")) return;
             var data = line.slice(6).trim();
@@ -1355,9 +1355,10 @@
 
       // Hide canvas when auth screen is not shown
       const authScreen = document.getElementById('auth-screen');
-      const authVisible = authScreen && authScreen.style.display !== 'none' && getComputedStyle(authScreen).display !== 'none';
-      canvas.classList.toggle('hidden', !authVisible);
-      if (!authVisible) return;
+      const chatScreen = document.getElementById('chat-screen');
+      const chatVisible = chatScreen && chatScreen.style.display === 'flex';
+      canvas.classList.toggle('hidden', chatVisible);
+      if (chatVisible) return;
 
       const dt = lastTime ? Math.min((now - lastTime) / 1000, 0.1) : 0;
       lastTime = now;
