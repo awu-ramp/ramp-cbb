@@ -127,7 +127,7 @@
       border: 1px solid var(--border);
       border-top: 3px solid #e8ff47;
       border-radius: 16px;
-      padding: 32px 40px;
+      padding: 44px 40px 32px;
       width: 100%;
       max-width: 400px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
@@ -244,7 +244,104 @@
       min-height: 18px;
     }
 
+    /* ── sidebar ── */
+    #chat-screen {
+      flex: 1;
+      display: none;
+      flex-direction: row;
+      overflow: hidden;
+    }
+
+    #sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: #111;
+      border-right: 1px solid #2e2e2e;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 12px;
+      border-bottom: 1px solid #2e2e2e;
+      flex-shrink: 0;
+    }
+
+    .new-chat-btn {
+      width: 100%;
+      padding: 8px 12px;
+      background: rgba(232,255,71,0.08);
+      border: 1px solid rgba(232,255,71,0.2);
+      border-radius: 8px;
+      color: #e8ff47;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .new-chat-btn:hover { background: rgba(232,255,71,0.15); }
+
+    #chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .chat-item {
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #888;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background 0.1s, color 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    .chat-item:hover { background: #1e1e1e; color: #f0f0f0; }
+    .chat-item.active { background: #1e1e1e; color: #f0f0f0; }
+    .chat-item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-item-delete {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 2px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .chat-item:hover .chat-item-delete { opacity: 1; }
+    .chat-item-delete:hover { color: #c00; }
+
+    #chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     /* ── chat ── */
+    #chat-screen-inner {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     #chat-screen {
       flex: 1;
       display: none;
@@ -661,12 +758,21 @@
     </div>
 
     <div class="auth-error" id="auth-error"></div>
-    <div style="margin-top: 8px; text-align: center;"><span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(232,255,71,0.08); border: 1px solid rgba(232,255,71,0.2); border-radius: 99px; padding: 2px 8px; font-size: 10px; color: #e8ff47;">⚡ powered by Ramp</span></div>
+    <div style="margin-top: 20px; text-align: center;"><span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(232,255,71,0.08); border: 1px solid rgba(232,255,71,0.2); border-radius: 99px; padding: 2px 8px; font-size: 10px; color: #e8ff47;">⚡ powered by Ramp</span></div>
   </div>
 </div>
 
 <!-- Chat -->
 <div id="chat-screen">
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <button class="new-chat-btn" onclick="newChat()">
+        <span>✏</span> new chat
+      </button>
+    </div>
+    <div id="chat-list"></div>
+  </div>
+  <div id="chat-main">
   <div class="model-bar">
     <span class="model-label">Model</span>
     <div class="model-pills">
@@ -939,33 +1045,108 @@
     else if (el) el.textContent = "";
   }
 
-  // ── persistence ─────────────────────────────────────────────────────
-  function saveHistory() {
-    try { localStorage.setItem("tc_history", JSON.stringify(chatHistory)); } catch(e) {}
+  // ── multi-chat persistence ───────────────────────────────────────────
+  var currentChatId = null;
+
+  function genId() {
+    return "chat_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
   }
 
-  function loadHistory() {
+  function getAllChats() {
     try {
-      var saved = localStorage.getItem("tc_history");
+      var keys = Object.keys(localStorage).filter(function(k) { return k.startsWith("tc_chat_"); });
+      return keys.map(function(k) {
+        try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; }
+      }).filter(Boolean).sort(function(a, b) { return b.updatedAt - a.updatedAt; });
+    } catch(e) { return []; }
+  }
+
+  function saveHistory() {
+    if (!currentChatId) return;
+    var title = chatHistory.length > 0
+      ? (typeof chatHistory[0].content === "string" ? chatHistory[0].content : "new chat").slice(0, 40)
+      : "new chat";
+    try {
+      localStorage.setItem("tc_chat_" + currentChatId, JSON.stringify({
+        id: currentChatId,
+        title: title,
+        messages: chatHistory,
+        updatedAt: Date.now()
+      }));
+    } catch(e) {}
+    renderChatList();
+  }
+
+  function loadChat(id) {
+    currentChatId = id;
+    chatHistory = [];
+    var msgs = document.getElementById("messages");
+    msgs.innerHTML = '<div class="empty-state" id="empty-state"><div class="icon">⚡</div><p>claude-sonnet is ready. start building.</p></div>';
+    try {
+      var saved = localStorage.getItem("tc_chat_" + id);
       if (saved) {
-        chatHistory = JSON.parse(saved);
+        var chat = JSON.parse(saved);
+        chatHistory = chat.messages || [];
         chatHistory.forEach(function(msg) {
           if (typeof msg.content === "string") appendMessage(msg.role, msg.content);
         });
-        document.getElementById("empty-state") && document.getElementById("empty-state").remove();
-        updateTokenCounter();
+        var es = document.getElementById("empty-state");
+        if (chatHistory.length > 0 && es) es.remove();
       }
     } catch(e) { chatHistory = []; }
+    renderChatList();
+    updateTokenCounter();
+    document.getElementById("input") && document.getElementById("input").focus();
+  }
+
+  function newChat() {
+    var id = genId();
+    currentChatId = id;
+    chatHistory = [];
+    pendingFiles = [];
+    renderAttachmentPreviews();
+    var msgs = document.getElementById("messages");
+    msgs.innerHTML = '<div class="empty-state" id="empty-state"><div class="icon">⚡</div><p>claude-sonnet is ready. start building.</p></div>';
+    updateTokenCounter();
+    renderChatList();
+    document.getElementById("input") && document.getElementById("input").focus();
+  }
+
+  function deleteChat(id, e) {
+    e.stopPropagation();
+    localStorage.removeItem("tc_chat_" + id);
+    if (currentChatId === id) newChat();
+    else renderChatList();
+  }
+
+  function renderChatList() {
+    var list = document.getElementById("chat-list");
+    if (!list) return;
+    var chats = getAllChats();
+    if (chats.length === 0) {
+      list.innerHTML = '<div style="padding: 12px 10px; font-size: 11px; color: #444;">no chats yet</div>';
+      return;
+    }
+    list.innerHTML = chats.map(function(c) {
+      return '<div class="chat-item' + (c.id === currentChatId ? " active" : "") + '" onclick="loadChat('' + c.id + '')">'
+        + '<span class="chat-item-title">' + (c.title || "new chat") + '</span>'
+        + '<button class="chat-item-delete" onclick="deleteChat('' + c.id + '', event)" title="delete">✕</button>'
+        + '</div>';
+    }).join("");
+  }
+
+  function loadHistory() {
+    // Load most recent chat or start new
+    var chats = getAllChats();
+    if (chats.length > 0) {
+      loadChat(chats[0].id);
+    } else {
+      newChat();
+    }
   }
 
   function clearConversation() {
-    chatHistory = [];
-    localStorage.removeItem("tc_history");
-    var msgs = document.getElementById("messages");
-    msgs.innerHTML = '<div class="empty-state" id="empty-state"><div class="icon">⚡</div><p>claude-sonnet is ready. start building.</p></div>';
-    pendingFiles = [];
-    renderAttachmentPreviews();
-    updateTokenCounter();
+    newChat();
   }
 
   // ── input ────────────────────────────────────────────────────────────
