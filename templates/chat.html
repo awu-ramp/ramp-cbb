@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/static/pixel.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ramp Build Board</title>
   <style>
@@ -447,18 +448,18 @@
 
     .stop-btn {
       width: 40px; height: 40px;
-      background: #c00;
-      color: #fff;
-      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
       border-radius: 8px;
       cursor: pointer;
       display: none;
       align-items: center; justify-content: center;
       flex-shrink: 0;
-      font-size: 16px;
-      transition: opacity 0.15s;
+      font-size: 14px;
+      transition: opacity 0.15s, border-color 0.15s;
     }
-    .stop-btn:hover { opacity: 0.8; }
+    .stop-btn:hover { border-color: #888; opacity: 1; }
 
     .clear-btn {
       font-size: 11px;
