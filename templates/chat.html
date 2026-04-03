@@ -1143,8 +1143,7 @@
         return reader.read().then(function(result) {
           if (result.done) return;
           var chunk = decoder.decode(result.value, { stream: true });
-          var chunkLines = chunk.split("
-");
+          var chunkLines = chunk.split("\n");
           chunkLines.forEach(function(line) {
             if (!line.startsWith("data: ")) return;
             var data = line.slice(6).trim();
