@@ -227,7 +227,7 @@
       </tbody>
     </table>
     {% else %}
-    <div class="empty">No activity yet — be the first! 🚀</div>
+    <div class="empty">no activity yet — be the first! ☺︎</div>
     {% endif %}
   </div>
 
@@ -240,23 +240,7 @@
 
 <script>
   // ── theme ──────────────────────────────────────────────────────
-  var html = document.documentElement;
-  var themeBtn = document.getElementById("theme-toggle");
-
-  function applyTheme(dark) {
-    html.classList.toggle("dark", dark);
-    themeBtn.textContent = dark ? "☀️" : "🌙";
-  }
-
-  function toggleTheme() {
-    var isDark = !html.classList.contains("dark");
-    localStorage.setItem("tc_theme", isDark ? "dark" : "light");
-    applyTheme(isDark);
-  }
-
-  var saved = localStorage.getItem("tc_theme");
-  var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  applyTheme(saved ? saved === "dark" : prefersDark);
+  // dark mode always on (set on html element)
 
   // ── canvas background ──────────────────────────────────────────
   (function() {
