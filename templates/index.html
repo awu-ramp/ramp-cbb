@@ -415,20 +415,23 @@
     var ro = new ResizeObserver(updateCardRects);
     ro.observe(document.body);
     window.addEventListener("scroll", updateCardRects, { passive: true });
+    function eggHitTest(mx, my) {
+      return floaters.some(function(fl) {
+        return fl.text === EASTER_EGG &&
+          mx >= fl.x && mx <= fl.x + fl.totalWidth &&
+          my >= fl.y - 6 && my <= fl.y + 20;
+      });
+    }
     window.addEventListener("mousemove", function(e) {
       mouse.x = e.clientX; mouse.y = e.clientY;
-      var onEgg = floaters.some(function(fl) {
-        return fl.text===EASTER_EGG && e.clientX>=fl.x && e.clientX<=fl.x+fl.totalWidth && e.clientY>=fl.y-4 && e.clientY<=fl.y+18;
-      });
+      var onEgg = eggHitTest(e.clientX, e.clientY);
       canvas.style.pointerEvents = onEgg ? "auto" : "none";
       canvas.style.cursor = onEgg ? "pointer" : "default";
     });
-    canvas.addEventListener("click", function(e) {
-      floaters.forEach(function(fl) {
-        if (fl.text===EASTER_EGG && e.clientX>=fl.x && e.clientX<=fl.x+fl.totalWidth && e.clientY>=fl.y-4 && e.clientY<=fl.y+18) {
-          window.open(EASTER_URL, "_blank");
-        }
-      });
+    window.addEventListener("click", function(e) {
+      if (eggHitTest(e.clientX, e.clientY)) {
+        window.open(EASTER_URL, "_blank");
+      }
     });
     window.addEventListener("resize", resize);
     resize(); updateCardRects(); requestAnimationFrame(draw);
