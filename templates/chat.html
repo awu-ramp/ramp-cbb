@@ -724,7 +724,7 @@
 
   // ── state ───────────────────────────────────────────────────────────
   var apiKey = localStorage.getItem("tc_api_key") || "";
-  var history = [];
+  var chatHistory = [];
   var isLoading = false;
   var pendingFiles = [];
   var abortController = null;
@@ -891,7 +891,7 @@
 
   // ── token counter ───────────────────────────────────────────────────
   function updateTokenCounter() {
-    var approxTokens = Math.floor(JSON.stringify(history).length / 4);
+    var approxTokens = Math.floor(JSON.stringify(chatHistory).length / 4);
     var el = document.getElementById("token-counter");
     if (el && history.length > 0) el.textContent = "~" + approxTokens.toLocaleString() + " tokens used";
     else if (el) el.textContent = "";
@@ -899,25 +899,25 @@
 
   // ── persistence ─────────────────────────────────────────────────────
   function saveHistory() {
-    try { localStorage.setItem("tc_history", JSON.stringify(history)); } catch(e) {}
+    try { localStorage.setItem("tc_history", JSON.stringify(chatHistory)); } catch(e) {}
   }
 
   function loadHistory() {
     try {
       var saved = localStorage.getItem("tc_history");
       if (saved) {
-        history = JSON.parse(saved);
-        history.forEach(function(msg) {
+        chatHistory = JSON.parse(saved);
+        chatHistory.forEach(function(msg) {
           if (typeof msg.content === "string") appendMessage(msg.role, msg.content);
         });
         document.getElementById("empty-state") && document.getElementById("empty-state").remove();
         updateTokenCounter();
       }
-    } catch(e) { history = []; }
+    } catch(e) { chatHistory = []; }
   }
 
   function clearConversation() {
-    history = [];
+    chatHistory = [];
     localStorage.removeItem("tc_history");
     var msgs = document.getElementById("messages");
     msgs.innerHTML = '<div class="empty-state" id="empty-state"><div class="icon">⚡</div><p>claude-sonnet is ready. start building.</p></div>';
@@ -977,7 +977,7 @@
       userContent = text;
     }
 
-    history.push({ role: "user", content: userContent });
+    chatHistory.push({ role: "user", content: userContent });
     var displayText = text || pendingFiles.map(function(f) { return f.name; }).join(", ");
     appendMessage("user", displayText);
 
@@ -1007,7 +1007,7 @@
     fetch("/chat-stream", {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({ messages: history, model: selectedModel }),
+      body: JSON.stringify({ messages: chatHistory, model: selectedModel }),
       signal: abortController.signal
     }).then(function(res) {
       if (res.status === 401) {
@@ -1072,7 +1072,7 @@
       actions._rawText = fullText;
       wrap.appendChild(actions);
       if (fullText) {
-        history.push({ role: "assistant", content: fullText });
+        chatHistory.push({ role: "assistant", content: fullText });
         saveHistory();
         updateTokenCounter();
       }
