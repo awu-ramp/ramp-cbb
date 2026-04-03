@@ -1123,16 +1123,30 @@
     var list = document.getElementById("chat-list");
     if (!list) return;
     var chats = getAllChats();
+    list.innerHTML = "";
     if (chats.length === 0) {
-      list.innerHTML = '<div style="padding: 12px 10px; font-size: 11px; color: #444;">no chats yet</div>';
+      var empty = document.createElement("div");
+      empty.style.cssText = "padding:12px 10px;font-size:11px;color:#444;";
+      empty.textContent = "no chats yet";
+      list.appendChild(empty);
       return;
     }
-    list.innerHTML = chats.map(function(c) {
-      return '<div class="chat-item' + (c.id === currentChatId ? " active" : "") + '" onclick="loadChat('' + c.id + '')">'
-        + '<span class="chat-item-title">' + (c.title || "new chat") + '</span>'
-        + '<button class="chat-item-delete" onclick="deleteChat('' + c.id + '', event)" title="delete">✕</button>'
-        + '</div>';
-    }).join("");
+    chats.forEach(function(c) {
+      var item = document.createElement("div");
+      item.className = "chat-item" + (c.id === currentChatId ? " active" : "");
+      item.onclick = function() { loadChat(c.id); };
+      var title = document.createElement("span");
+      title.className = "chat-item-title";
+      title.textContent = c.title || "new chat";
+      var del = document.createElement("button");
+      del.className = "chat-item-delete";
+      del.title = "delete";
+      del.textContent = "x";
+      del.onclick = function(e) { deleteChat(c.id, e); };
+      item.appendChild(title);
+      item.appendChild(del);
+      list.appendChild(item);
+    });
   }
 
   function loadHistory() {
