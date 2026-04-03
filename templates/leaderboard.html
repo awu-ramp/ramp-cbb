@@ -11,21 +11,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #f7f7f5;
-      --surface: #fff;
-      --border: #e8e8e6;
-      --text: #1a1a1a;
-      --text-muted: #888;
-      --text-faint: #bbb;
-      --th-bg: #fafaf8;
-      --th-border: #f0f0ee;
-      --row-border: #f5f5f3;
-      --row-hover: #fafaf8;
-      --rank-color: #888;
-      --rank-top: #000;
-    }
-
-    html.dark {
       --bg: #0f0f0f;
       --surface: #1a1a1a;
       --border: #2e2e2e;
@@ -107,18 +92,7 @@
     }
     .back-btn:hover { opacity: 1; }
 
-    .theme-toggle {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      opacity: 0.6;
-      transition: opacity 0.15s;
-      padding: 0;
-      line-height: 1;
-      color: #fff;
-    }
-    .theme-toggle:hover { opacity: 1; }
+
 
     .hero {
       background: #000;
@@ -212,7 +186,6 @@
   </div>
   <div class="header-right">
     <a href="/" class="back-btn">← back to chat</a>
-    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
   </div>
 </header>
 
@@ -383,11 +356,9 @@
       lastTime = now;
       var W = window.innerWidth, H = window.innerHeight;
       var T = now * 0.001;
-      var isDark = html.classList.contains("dark");
+      var isDark = true;
       var fadeEl = document.getElementById("top-fade");
-      if (fadeEl) fadeEl.style.background = isDark
-        ? "linear-gradient(to bottom, #000 0%, transparent 100%)"
-        : "linear-gradient(to bottom, #f7f7f5 0%, transparent 100%)";
+      if (fadeEl) fadeEl.style.background = "linear-gradient(to bottom, #000 0%, transparent 100%)";
       var COLOURS = isDark ? COLOURS_DARK : COLOURS_LIGHT;
       var bgAlphaMax = isDark ? 0.6 : 0.12;
 
