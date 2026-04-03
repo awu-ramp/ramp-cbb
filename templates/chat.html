@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ramp emerging talent — Claude</title>
+  <title>Ramp Build Board</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -209,20 +209,38 @@
     }
     input:focus { border-color: #888; }
 
-    .btn-primary {
-      width: 100%;
-      padding: 9px;
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
+    .btn-primary { display: none; }
+
+    .pixel-enter {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
       cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+      background: none;
+      border: none;
+      width: 100%;
+      padding: 0;
     }
-    .btn-primary:hover { border-color: #888; }
-    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pixel-enter:hover { opacity: 1; }
+    .pixel-enter:disabled { opacity: 0.3; cursor: not-allowed; }
+    .pixel-enter-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: inherit;
+    }
+    .pixel-enter-arrow {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+    .pixel-enter-icon {
+      width: 36px;
+      height: 36px;
+      image-rendering: pixelated;
+    }
 
     .auth-error {
       font-size: 13px;
@@ -626,13 +644,21 @@
 
     <div id="login-form">
       <input id="login-key" type="text" placeholder="paste your api key (tc-...)" />
-      <button class="btn-primary" onclick="login()">enter</button>
+      <button class="pixel-enter" onclick="login()" id="login-btn">
+        <span class="pixel-enter-label">click to enter</span>
+        <span class="pixel-enter-arrow">→</span>
+        <img src="/static/pixel.png" class="pixel-enter-icon" alt="enter" />
+      </button>
     </div>
 
     <div id="register-form" style="display:none">
       <input id="reg-name" type="text" placeholder="your name" />
       <input id="reg-email" type="email" placeholder="your email" />
-      <button class="btn-primary" onclick="register()">get my key</button>
+      <button class="pixel-enter" onclick="register()" id="register-btn">
+        <span class="pixel-enter-label">get my key</span>
+        <span class="pixel-enter-arrow">→</span>
+        <img src="/static/pixel.png" class="pixel-enter-icon" alt="enter" />
+      </button>
     </div>
 
     <div class="auth-error" id="auth-error"></div>
@@ -755,9 +781,9 @@
     var email = document.getElementById("reg-email").value.trim();
     if (!name || !email) { setError("name and email are required."); return; }
     setError("");
-    var btn = document.querySelector("#register-form .btn-primary");
+    var btn = document.getElementById("register-btn");
     btn.disabled = true;
-    btn.textContent = "registering…";
+    btn.querySelector(".pixel-enter-label").textContent = "registering…";
     fetch("/register", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -773,7 +799,7 @@
       setError("network error — try again.");
     }).finally(function() {
       btn.disabled = false;
-      btn.textContent = "get my key";
+      btn.querySelector(".pixel-enter-label").textContent = "get my key";
     });
   }
 
