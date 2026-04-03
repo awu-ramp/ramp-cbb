@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-DATABASE_URL = os.environ["DATABASE_URL"].replace("postgres://", "postgresql://", 1)
+DATABASE_URL = os.environ["DATABASE_URL"].replace("postgres://", "postgresql://", 1)  # works for both Railway and Ramplify
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "changeme")
 # Default access duration in days (override with ACCESS_DURATION_DAYS env var)
@@ -93,6 +93,10 @@ def healthcheck():
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    return templates.TemplateResponse(request, "index.html", {})
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request):
     return templates.TemplateResponse(request, "chat.html", {})
 
 

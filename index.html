@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ramp Build Board</title>
+  <link rel="icon" type="image/png" href="/static/pixel.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── canvas ── */
+    #auth-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── header ── */
+    header {
+      background: #000;
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 2;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .ramp-logo { width: 26px; height: 26px; border-radius: 50%; image-rendering: pixelated; }
+    .divider { opacity: 0.3; font-size: 16px; }
+    .subtitle { font-size: 13px; opacity: 0.6; }
+    .leaderboard-link { color: #fff; text-decoration: none; font-size: 12px; opacity: 0.6; transition: opacity 0.15s; }
+    .leaderboard-link:hover { opacity: 1; }
+
+    /* ── auth screen ── */
+    #auth-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-card {
+      background: #1a1a1a;
+      border: 1px solid #2e2e2e;
+      border-top: 3px solid #e8ff47;
+      border-radius: 16px;
+      padding: 44px 40px 32px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.6);
+    }
+
+    .auth-card h2 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 18px;
+      font-weight: 400;
+      color: #e8ff47;
+      text-shadow: 2px 2px 0px #4a5200, 0 0 12px rgba(232,255,71,0.6);
+      letter-spacing: 1px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 8px;
+      font-size: 10px;
+      font-weight: 400;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      letter-spacing: 0.5px;
+      border: none;
+      border-radius: 2px;
+      transition: box-shadow 0.08s, transform 0.08s;
+      color: rgba(255,255,255,0.4);
+      background: #2a2a2a;
+      box-shadow: inset -3px -3px 0px #111, inset 3px 3px 0px #444;
+    }
+    .tab.active {
+      color: #2a1a00;
+      background: #e8ff47;
+      box-shadow: inset -3px -3px 0px #9aaa00, inset 3px 3px 0px #f8ff9a;
+    }
+    .tab:active { transform: translate(1px, 1px); }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #2e2e2e;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
+      outline: none;
+      background: #111;
+      color: #f0f0f0;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: #555; }
+
+    .pixel-enter {
+      display: block;
+      margin-top: 8px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      padding: 0;
+      text-align: center;
+    }
+    .pixel-enter:disabled { opacity: 0.3; cursor: not-allowed; }
+    .pixel-enter-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 16px;
+      color: #e8ff47;
+      text-shadow: 2px 2px 0px #4a5200, 0 0 10px rgba(232,255,71,0.6), 0 0 24px rgba(232,255,71,0.3);
+      letter-spacing: 2px;
+      transition: text-shadow 0.15s;
+      display: inline-block;
+    }
+    .pixel-enter:hover .pixel-enter-label {
+      text-shadow: 2px 2px 0px #4a5200, 0 0 16px rgba(232,255,71,0.9), 0 0 32px rgba(232,255,71,0.5);
+    }
+
+    .auth-error { font-size: 13px; color: #f55; margin-top: 12px; min-height: 18px; }
+
+    .card-footer {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .ramp-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(232,255,71,0.08);
+      border: 1px solid rgba(232,255,71,0.2);
+      border-radius: 99px;
+      padding: 3px 10px;
+      font-size: 10px;
+      color: #e8ff47;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="auth-canvas"></canvas>
+
+<header>
+  <div class="header-left">
+    <img src="/static/pixel.png" class="ramp-logo" alt="Ramp" />
+    <span class="divider">|</span>
+    <span class="subtitle">emerging talent</span>
+  </div>
+  <a href="/leaderboard" class="leaderboard-link">leaderboard</a>
+</header>
+
+<div id="auth-screen">
+  <div class="auth-card" data-bg-card>
+    <h2>ready to build?</h2>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">i have a key</button>
+      <button class="tab" onclick="switchTab('register')">new here</button>
+    </div>
+
+    <div id="login-form">
+      <input id="login-key" type="text" placeholder="paste your api key (tc-...)" />
+      <button class="pixel-enter" onclick="login()" id="login-btn">
+        <span class="pixel-enter-label">enter</span>
+      </button>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <input id="reg-name" type="text" placeholder="your name" />
+      <input id="reg-email" type="email" placeholder="your email" />
+      <button class="pixel-enter" onclick="register()" id="register-btn">
+        <span class="pixel-enter-label">get my key</span>
+      </button>
+    </div>
+
+    <div class="auth-error" id="auth-error"></div>
+    <div class="card-footer">
+      <span class="ramp-badge">⚡ powered by Ramp</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // If already has key, go straight to chat
+  if (localStorage.getItem("tc_api_key")) {
+    window.location.href = "/chat";
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll(".tab").forEach(function(t, i) {
+      t.classList.toggle("active", (i === 0) === (tab === "login"));
+    });
+    document.getElementById("login-form").style.display = tab === "login" ? "" : "none";
+    document.getElementById("register-form").style.display = tab === "register" ? "" : "none";
+    document.getElementById("auth-error").textContent = "";
+  }
+
+  function login() {
+    var key = document.getElementById("login-key").value.trim();
+    if (!key) { setError("paste your api key first."); return; }
+    localStorage.setItem("tc_api_key", key);
+    window.location.href = "/chat";
+  }
+
+  function register() {
+    var name = document.getElementById("reg-name").value.trim();
+    var email = document.getElementById("reg-email").value.trim();
+    if (!name || !email) { setError("name and email are required."); return; }
+    setError("");
+    var btn = document.getElementById("register-btn");
+    btn.disabled = true;
+    btn.querySelector(".pixel-enter-label").textContent = "loading...";
+    fetch("/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: name, email: email })
+    }).then(function(res) {
+      return res.json().then(function(data) { return { ok: res.ok, data: data }; });
+    }).then(function(r) {
+      if (!r.ok) { setError(r.data.detail || "something went wrong. make sure you used the same email you rsvped with."); return; }
+      localStorage.setItem("tc_api_key", r.data.api_key);
+      localStorage.setItem("tc_new_key", r.data.api_key); // flag to show key on chat page
+      window.location.href = "/chat";
+    }).catch(function() {
+      setError("network error — try again.");
+    }).finally(function() {
+      btn.disabled = false;
+      btn.querySelector(".pixel-enter-label").textContent = "get my key";
+    });
+  }
+
+  function setError(msg) {
+    document.getElementById("auth-error").textContent = msg;
+  }
+
+  // ── canvas background ──────────────────────────────────────────────
+  (function() {
+    var canvas = document.getElementById("auth-canvas");
+    var ctx = canvas.getContext("2d");
+    var CHAR_POOL = "{}[]()<>=+*&|!?@#$%^~;:.,0123456789abcdefABCDEFxyz_-";
+    var COL_WIDTH = 7.5, ROW_HEIGHT = 17, MOUSE_RADIUS = 130, CARD_RADIUS = 80;
+    var COLOURS = [[232,255,71],[200,220,40],[255,255,255],[180,180,180],[232,255,71],[150,200,50]];
+    var PHRASES = [
+      "build something","ship it","iterate fast","spend smarter","move quickly",
+      "prove it","close faster","real-time","automate","emerging talent",
+      "full stack","finance infra","cracked engineer","ramp it up",
+      "production ready","type safe","zero to one","scale this",
+      "builders.ramp.com/emerging-talent"
+    ];
+    var EASTER_EGG = "builders.ramp.com/emerging-talent";
+    var EASTER_URL = "https://builders.ramp.com/emerging-talent";
+    var cols = 0, rows = 0, grid = [], floaters = [], cardRects = [];
+    var mouse = { x: -9999, y: -9999 };
+    var lastTime = 0, nextFloat = 1 + Math.random() * 2, phraseData = [];
+
+    function randChar() { return CHAR_POOL[Math.floor(Math.random() * CHAR_POOL.length)]; }
+    function dist(px, py, r) {
+      var dx = Math.max(r.x - px, 0, px - (r.x + r.w));
+      var dy = Math.max(r.y - py, 0, py - (r.y + r.h));
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    function buildPhraseData() {
+      ctx.font = "300 13px monospace";
+      phraseData = PHRASES.map(function(text) {
+        var widths = text.split("").map(function(ch) { return ctx.measureText(ch).width || 6; });
+        return { text: text, widths: widths, totalWidth: widths.reduce(function(a,b){return a+b;},0) };
+      });
+    }
+
+    function resize() {
+      var dpr = window.devicePixelRatio || 1;
+      var W = window.innerWidth, H = window.innerHeight;
+      canvas.width = W*dpr; canvas.height = H*dpr;
+      canvas.style.width = W+"px"; canvas.style.height = H+"px";
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      cols = Math.ceil(W/COL_WIDTH)+2; rows = Math.ceil(H/ROW_HEIGHT)+24;
+      grid = [];
+      for (var c = 0; c < cols; c++) {
+        var chars = [];
+        for (var r = 0; r < rows; r++) {
+          chars.push({ char: randChar(), brightness: 0.03+Math.random()*0.12, colorIdx: Math.floor(Math.random()*COLOURS.length), phase: Math.random()*Math.PI*2 });
+        }
+        grid.push({ speed: 10+Math.sin(c*0.37)*5+Math.random()*8, offset: Math.random()*rows*ROW_HEIGHT, chars: chars });
+      }
+      buildPhraseData();
+    }
+
+    function updateCardRects() {
+      cardRects = Array.from(document.querySelectorAll("[data-bg-card]")).map(function(el) {
+        var r = el.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height };
+      });
+    }
+
+    function draw(now) {
+      requestAnimationFrame(draw);
+      var dt = lastTime ? Math.min((now-lastTime)/1000, 0.1) : 0;
+      lastTime = now;
+      var W = window.innerWidth, H = window.innerHeight, T = now*0.001;
+      ctx.clearRect(0,0,W,H);
+      ctx.font = "400 11px monospace";
+      ctx.textBaseline = "top"; ctx.textAlign = "left";
+      var totalH = rows*ROW_HEIGHT;
+
+      for (var c = 0; c < cols; c++) {
+        var col = grid[c];
+        col.offset = (col.offset + col.speed*dt) % totalH;
+        var cx = c*COL_WIDTH;
+        if (cx > W+COL_WIDTH) continue;
+        for (var r = 0; r < rows; r++) {
+          var cy = r*ROW_HEIGHT - col.offset;
+          if (cy < -ROW_HEIGHT) cy += totalH;
+          if (cy > H+ROW_HEIGHT) continue;
+          var cell = col.chars[r], cellX = cx+COL_WIDTH/2, cellY = cy+ROW_HEIGHT/2;
+          var cardFade = 1;
+          for (var k = 0; k < cardRects.length; k++) {
+            var d = dist(cellX, cellY, cardRects[k]);
+            if (d < CARD_RADIUS) cardFade = Math.min(cardFade, d/CARD_RADIUS);
+          }
+          if (cardFade < 0.01) continue;
+          var dx = cellX-mouse.x, dy = cellY-mouse.y, dd = Math.sqrt(dx*dx+dy*dy);
+          var rep = 0, rx = 0, ry = 0;
+          if (dd < MOUSE_RADIUS && dd > 0) {
+            rep = Math.pow(1-dd/MOUSE_RADIUS,1.8);
+            rx = (dx/dd)*rep*12; ry = (dy/dd)*rep*12;
+          }
+          var pulse = Math.sin(T*1.2+cell.phase)*0.02;
+          var alpha = Math.min((cell.brightness+rep*0.4+pulse)*cardFade*4, 0.6);
+          if (alpha < 0.005) continue;
+          var col_ = COLOURS[cell.colorIdx];
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = "rgb("+col_[0]+","+col_[1]+","+col_[2]+")";
+          ctx.fillText(cell.char, cx+rx, cy+ry);
+          if (Math.random() < 2e-4) cell.char = randChar();
+        }
+      }
+
+      nextFloat -= dt;
+      if (nextFloat <= 0 && floaters.length < 5) {
+        var isEgg = Math.random() < 0.25 && !floaters.some(function(f){return f.text===EASTER_EGG;});
+        var nonEgg = phraseData.filter(function(p){return p.text!==EASTER_EGG;});
+        var pd = isEgg ? phraseData.find(function(p){return p.text===EASTER_EGG;}) : nonEgg[Math.floor(Math.random()*nonEgg.length)];
+        floaters.push({ text:pd.text, widths:pd.widths, totalWidth:pd.totalWidth, x:Math.random()*Math.max(10,W-pd.totalWidth), y:H+20, speed:isEgg?14:35+Math.random()*20, colorIdx:Math.floor(Math.random()*COLOURS.length) });
+        nextFloat = 4+Math.random()*6;
+      }
+
+      ctx.font = "300 13px monospace";
+      floaters = floaters.filter(function(fl) {
+        fl.y -= fl.speed*dt;
+        if (fl.y < -30) return false;
+        var isEgg = fl.text===EASTER_EGG;
+        var eggHovered = isEgg && mouse.x>=fl.x && mouse.x<=fl.x+fl.totalWidth && mouse.y>=fl.y-4 && mouse.y<=fl.y+18;
+        var eft = Math.min((H-fl.y)/(H*0.12),1), efb = Math.min((fl.y+30)/(H*0.12),1);
+        var baseAlpha = isEgg ? 0.28*eft*efb : 0.18*eft*efb;
+        var x = fl.x;
+        for (var i = 0; i < fl.text.length; i++) {
+          var ch = fl.text[i], cw = fl.widths[i];
+          if (ch===" ") { x+=cw; continue; }
+          var cf2 = 1;
+          for (var k = 0; k < cardRects.length; k++) {
+            var d2 = dist(x+cw/2, fl.y, cardRects[k]);
+            if (d2 < CARD_RADIUS) cf2 = Math.min(cf2, d2/CARD_RADIUS);
+          }
+          var hb = eggHovered ? 0.08 : 0;
+          var a2 = Math.min((baseAlpha+hb)*cf2, isEgg?0.45:0.35);
+          if (a2 > 0.005) {
+            var c_ = isEgg ? [232,255,71] : COLOURS[fl.colorIdx];
+            if (isEgg) { ctx.save(); ctx.shadowColor="rgba(232,255,71,0.35)"; ctx.shadowBlur=eggHovered?8:4; }
+            ctx.globalAlpha = a2;
+            ctx.fillStyle = "rgb("+c_[0]+","+c_[1]+","+c_[2]+")";
+            ctx.font = isEgg ? "300 13px monospace" : "300 13px monospace";
+            ctx.fillText(ch, x, fl.y);
+            if (isEgg) ctx.restore();
+          }
+          x += cw;
+        }
+        return true;
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    var ro = new ResizeObserver(updateCardRects);
+    ro.observe(document.body);
+    window.addEventListener("scroll", updateCardRects, { passive: true });
+    window.addEventListener("mousemove", function(e) {
+      mouse.x = e.clientX; mouse.y = e.clientY;
+      var onEgg = floaters.some(function(fl) {
+        return fl.text===EASTER_EGG && e.clientX>=fl.x && e.clientX<=fl.x+fl.totalWidth && e.clientY>=fl.y-4 && e.clientY<=fl.y+18;
+      });
+      canvas.style.pointerEvents = onEgg ? "auto" : "none";
+      canvas.style.cursor = onEgg ? "pointer" : "default";
+    });
+    canvas.addEventListener("click", function(e) {
+      floaters.forEach(function(fl) {
+        if (fl.text===EASTER_EGG && e.clientX>=fl.x && e.clientX<=fl.x+fl.totalWidth && e.clientY>=fl.y-4 && e.clientY<=fl.y+18) {
+          window.open(EASTER_URL, "_blank");
+        }
+      });
+    });
+    window.addEventListener("resize", resize);
+    resize(); updateCardRects(); requestAnimationFrame(draw);
+  })();
+</script>
+</body>
+</html>
