@@ -426,7 +426,7 @@
       mouse.x = e.clientX; mouse.y = e.clientY;
       var onEgg = eggHitTest(e.clientX, e.clientY);
       canvas.style.pointerEvents = onEgg ? "auto" : "none";
-      canvas.style.cursor = onEgg ? "pointer" : "default";
+      document.documentElement.style.cursor = onEgg ? "pointer" : "default";
     });
     window.addEventListener("click", function(e) {
       if (eggHitTest(e.clientX, e.clientY)) {
