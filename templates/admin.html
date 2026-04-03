@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Campus Build Board</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f7f7f5; color: #1a1a1a; }
+    header { background: #000; color: #fff; padding: 20px 32px; font-size: 16px; font-weight: 600; }
+    .container { max-width: 1200px; margin: 32px auto; padding: 0 24px 48px; }
+    h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e8e8e6; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 12px 16px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #888; border-bottom: 1px solid #f0f0ee; background: #fafaf8; }
+    tbody tr { border-bottom: 1px solid #f5f5f3; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafaf8; }
+    td { padding: 13px 16px; font-size: 13px; vertical-align: middle; }
+    .key { font-family: monospace; font-size: 11px; color: #888; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+    .badge.active { background: #e6f4ea; color: #1a7f37; }
+    .badge.inactive { background: #f5f5f3; color: #888; }
+    .badge.expired { background: #fce8e6; color: #c00; }
+    .tokens { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .action-btn { font-size: 11px; cursor: pointer; background: none; border: none; padding: 0; margin-left: 8px; }
+    .action-btn.danger { color: #c00; text-decoration: underline; }
+    .action-btn.edit { color: #0066cc; text-decoration: underline; }
+    .expiry-form { display: none; align-items: center; gap: 6px; margin-top: 4px; }
+    .expiry-form input[type=date] { font-size: 12px; padding: 3px 6px; border: 1px solid #e8e8e6; border-radius: 4px; }
+    .expiry-form button { font-size: 11px; padding: 3px 8px; background: #000; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .expiry-text { font-size: 12px; color: #888; }
+    .expiry-text.soon { color: #d97706; font-weight: 600; }
+    .expiry-text.expired-label { color: #c00; font-weight: 600; }
+    .section { margin-top: 48px; }
+    .allowlist-input-row { display: flex; gap: 12px; margin-bottom: 16px; align-items: flex-start; }
+    .allowlist-input-row textarea { flex: 1; padding: 10px 12px; border: 1px solid #e8e8e6; border-radius: 8px; font-size: 13px; font-family: monospace; height: 80px; resize: vertical; }
+    .btn-black { padding: 10px 18px; background: #000; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-black:hover { opacity: 0.8; }
+  </style>
+</head>
+<body>
+<header>🔐 Campus Build Board — Admin</header>
+
+<div class="container">
+  <h2>All users ({{ rows|length }})</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Requests</th>
+          <th>Total Tokens</th>
+          <th>Last Active</th>
+          <th>Access Expires</th>
+          <th>API Key</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.name }}</strong></td>
+          <td>{{ row.email }}</td>
+          <td>
+            {% if not row.active %}
+              <span class="badge inactive">revoked</span>
+            {% elif row.expires_at and row.expires_at.replace(tzinfo=none) < now.replace(tzinfo=none) %}
+              <span class="badge expired">expired</span>
+            {% else %}
+              <span class="badge active">active</span>
+            {% endif %}
+          </td>
+          <td>{{ row.num_requests }}</td>
+          <td class="tokens">{{ "{:,}".format(row.total_tokens) }}</td>
+          <td>{% if row.last_active %}{{ row.last_active.strftime("%b %d, %Y") }}{% else %}—{% endif %}</td>
+          <td>
+            {% if row.expires_at %}
+              <span class="expiry-text {% if row.expires_at.replace(tzinfo=none) < now.replace(tzinfo=none) %}expired-label{% endif %}" id="expiry-text-{{ loop.index }}">
+                {{ row.expires_at.strftime("%b %d, %Y") }}
+              </span>
+            {% else %}
+              <span class="expiry-text" id="expiry-text-{{ loop.index }}">No expiry</span>
+            {% endif %}
+            <div class="expiry-form" id="expiry-form-{{ loop.index }}">
+              <input type="date" id="expiry-date-{{ loop.index }}"
+                value="{{ row.expires_at.strftime('%Y-%m-%d') if row.expires_at else '' }}" />
+              <button onclick="setExpiry('{{ row.email }}', {{ loop.index }})">Save</button>
+              <button onclick="toggleExpiry({{ loop.index }})" style="background:#888">✕</button>
+            </div>
+            <button class="action-btn edit" onclick="toggleExpiry({{ loop.index }})">edit</button>
+          </td>
+          <td class="key">{{ row.api_key[:16] }}…</td>
+          <td>
+            {% if row.active %}
+            <button class="action-btn danger" onclick="deactivate('{{ row.email }}')">Revoke</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Guest List (Allowlist)</h2>
+    <div class="allowlist-input-row">
+      <textarea id="bulk-emails" placeholder="Paste emails here, one per line or comma-separated"></textarea>
+      <button class="btn-black" onclick="addEmails()">Add Emails</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Added</th>
+            <th>Registered?</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="allowlist-body">
+          <tr><td colspan="4" style="padding:24px; text-align:center; color:#aaa;">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  var secret = new URLSearchParams(window.location.search).get("secret");
+
+  function toggleExpiry(idx) {
+    var form = document.getElementById("expiry-form-" + idx);
+    var text = document.getElementById("expiry-text-" + idx);
+    var showing = form.style.display === "flex";
+    form.style.display = showing ? "none" : "flex";
+    if (text) text.style.display = showing ? "" : "none";
+  }
+
+  function setExpiry(email, idx) {
+    var date = document.getElementById("expiry-date-" + idx).value;
+    if (!date) { alert("Pick a date first."); return; }
+    fetch("/admin/set-expiry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email, expires_at: date + "T23:59:59", secret: secret })
+    }).then(function() { location.reload(); });
+  }
+
+  function deactivate(email) {
+    if (!confirm("Revoke access for " + email + "?")) return;
+    fetch("/admin/deactivate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email, secret: secret })
+    }).then(function() { location.reload(); });
+  }
+
+  function loadAllowlist() {
+    fetch("/admin/allowlist?secret=" + secret)
+      .then(function(r) { return r.json(); })
+      .then(function(rows) {
+        var tbody = document.getElementById("allowlist-body");
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="padding:24px; text-align:center; color:#aaa;">No emails yet — add some above.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows.map(function(r) {
+          return '<tr>' +
+            '<td>' + r.email + '</td>' +
+            '<td style="color:#888; font-size:12px;">' + new Date(r.added_at).toLocaleDateString() + '</td>' +
+            '<td><span class="badge ' + (r.registered ? "active" : "inactive") + '">' + (r.registered ? "yes" : "not yet") + '</span></td>' +
+            '<td><button class="action-btn danger" onclick="removeEmail(\'' + r.email + '\')">Remove</button></td>' +
+            '</tr>';
+        }).join("");
+      });
+  }
+
+  function addEmails() {
+    var raw = document.getElementById("bulk-emails").value;
+    var emails = raw.split(",").join("\n").split("\n")
+      .map(function(e) { return e.trim(); })
+      .filter(function(e) { return e.length > 0; });
+    if (!emails.length) { alert("Paste at least one email."); return; }
+    fetch("/admin/allowlist/add", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ emails: emails, secret: secret })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById("bulk-emails").value = "";
+      alert("Added " + data.added + " email(s).");
+      loadAllowlist();
+    });
+  }
+
+  function removeEmail(email) {
+    if (!confirm("Remove " + email + " from the guest list?")) return;
+    fetch("/admin/allowlist/remove", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email, secret: secret })
+    }).then(function() { loadAllowlist(); });
+  }
+
+  loadAllowlist();
+</script>
+</body>
+</html>

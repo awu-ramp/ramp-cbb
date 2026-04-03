@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Build Board</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f7f5;
+      --surface: #fff;
+      --border: #e8e8e6;
+      --text: #1a1a1a;
+      --text-muted: #888;
+      --text-faint: #bbb;
+      --th-bg: #fafaf8;
+      --th-border: #f0f0ee;
+      --row-border: #f5f5f3;
+      --row-hover: #fafaf8;
+      --rank-color: #888;
+      --rank-top: #000;
+    }
+
+    html.dark {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #2e2e2e;
+      --text: #f0f0f0;
+      --text-muted: #888;
+      --text-faint: #444;
+      --th-bg: #161616;
+      --th-border: #2a2a2a;
+      --row-border: #222;
+      --row-hover: #1e1e1e;
+      --rank-color: #555;
+      --rank-top: #e8ff47;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+    }
+
+    #lb-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* fade mask at top of page */
+    #lb-canvas::after {
+      content: '';
+    }
+
+    header, .hero, .container, footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* hero is transparent so canvas shows through */
+    .hero {
+      background: transparent !important;
+    }
+
+    /* overlay canvas on top for click detection of easter egg only */
+    #lb-egg-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    header {
+      background: #000;
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .ramp-logo { width: 28px; height: 28px; border-radius: 50%; }
+    .divider { opacity: 0.3; font-size: 18px; }
+    .subtitle { font-size: 13px; opacity: 0.6; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+
+    .back-btn {
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+      font-weight: 500;
+    }
+    .back-btn:hover { opacity: 1; }
+
+    .theme-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+      padding: 0;
+      line-height: 1;
+      color: #fff;
+    }
+    .theme-toggle:hover { opacity: 1; }
+
+    .hero {
+      background: #000;
+      color: #fff;
+      padding: 48px 32px 64px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 26px;
+      font-weight: 400;
+      letter-spacing: 2px;
+      font-family: 'Press Start 2P', monospace;
+      color: #e8ff47;
+      text-shadow:
+        3px 3px 0px #4a5200,
+        0 0 12px rgba(232, 255, 71, 0.7),
+        0 0 28px rgba(232, 255, 71, 0.35);
+      line-height: 1.4;
+    }
+    .pixel-icon { width: 52px; height: 52px; image-rendering: pixelated; }
+    .hero p { font-size: 16px; opacity: 0.6; max-width: 480px; margin: 0 auto; }
+
+    .container {
+      max-width: 800px;
+      margin: -32px auto 0;
+      padding: 0 24px 64px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      padding: 14px 20px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--th-border);
+      background: var(--th-bg);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    thead th:last-child { text-align: right; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--row-border);
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--row-hover); }
+
+    td { padding: 16px 20px; font-size: 14px; }
+    td:last-child { text-align: right; }
+
+    .rank { font-weight: 700; font-size: 15px; color: var(--rank-color); width: 40px; }
+    .rank.top { color: var(--rank-top); }
+    .name { font-weight: 600; font-size: 15px; }
+    .tokens { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .requests { color: var(--text-muted); font-size: 13px; }
+    .last-active { color: var(--text-faint); font-size: 12px; }
+
+    .empty { text-align: center; padding: 64px 24px; color: var(--text-faint); font-size: 15px; }
+
+    .join-cta { text-align: center; margin-top: 32px; font-size: 13px; color: var(--text-faint); }
+
+    footer { text-align: center; padding: 32px; font-size: 12px; color: var(--text-faint); }
+  </style>
+</head>
+<body>
+
+<canvas id="lb-canvas"></canvas>
+<canvas id="lb-egg-overlay"></canvas>
+<div id="top-fade" style="position:fixed;top:0;left:0;width:100%;height:180px;z-index:1;pointer-events:none;background:linear-gradient(to bottom, #000 0%, transparent 100%);transition:opacity 0.2s;"></div>
+
+<header>
+  <div class="header-left">
+    <img src="/static/pixel.png" class="ramp-logo" alt="Ramp" />
+    <span class="divider">|</span>
+    <span class="subtitle">emerging talent</span>
+  </div>
+  <div class="header-right">
+    <a href="/" class="back-btn">← back to chat</a>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>builder leaderboard</h1>
+</div>
+
+<div class="container" data-bg-card>
+  <div class="card">
+    {% if rows %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Requests</th>
+          <th>Last Active</th>
+          <th>Total Tokens</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="rank {% if loop.index <= 3 %}top{% endif %}">
+            {% if loop.index == 1 %}🥇
+            {% elif loop.index == 2 %}🥈
+            {% elif loop.index == 3 %}🥉
+            {% else %}{{ loop.index }}
+            {% endif %}
+          </td>
+          <td class="name">{{ row.name }}</td>
+          <td class="requests">{{ row.num_requests }} req</td>
+          <td class="last-active">
+            {% if row.last_active %}{{ row.last_active.strftime("%b %d") }}{% else %}—{% endif %}
+          </td>
+          <td class="tokens">{{ "{:,}".format(row.total_tokens) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">No activity yet — be the first! 🚀</div>
+    {% endif %}
+  </div>
+
+  <div class="join-cta">
+    don't have access yet? reach out to the ramp recruiting team.
+  </div>
+</div>
+
+<footer>© ramp · updated live</footer>
+
+<script>
+  // ── theme ──────────────────────────────────────────────────────
+  var html = document.documentElement;
+  var themeBtn = document.getElementById("theme-toggle");
+
+  function applyTheme(dark) {
+    html.classList.toggle("dark", dark);
+    themeBtn.textContent = dark ? "☀️" : "🌙";
+  }
+
+  function toggleTheme() {
+    var isDark = !html.classList.contains("dark");
+    localStorage.setItem("tc_theme", isDark ? "dark" : "light");
+    applyTheme(isDark);
+  }
+
+  var saved = localStorage.getItem("tc_theme");
+  var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved ? saved === "dark" : prefersDark);
+
+  // ── canvas background ──────────────────────────────────────────
+  (function() {
+    var canvas = document.getElementById("lb-canvas");
+    var ctx = canvas.getContext("2d");
+
+    var CHAR_POOL = "{}[]()<>=+*&|!?@#$%^~;:.,0123456789abcdefABCDEFxyz_-";
+    var COL_WIDTH = 7.5;
+    var ROW_HEIGHT = 17;
+    var FONT_SIZE = 11;
+    var MOUSE_RADIUS = 130;
+    var CARD_RADIUS = 80;
+
+    var COLOURS_LIGHT = [
+      [0,0,0],[60,60,60],[100,100,100],[180,200,0],[0,0,0],[80,80,80]
+    ];
+    var COLOURS_DARK = [
+      [232,255,71],[200,220,40],[255,255,255],[180,180,180],[232,255,71],[150,200,50]
+    ];
+
+    var PHRASES = [
+      "build something", "ship it", "iterate fast",
+      "spend smarter", "move quickly", "prove it",
+      "close faster", "real-time", "automate",
+      "emerging talent", "full stack", "finance infra",
+      "cracked engineer", "ramp it up", "production ready",
+      "type safe", "zero to one", "scale this",
+      "builders.ramp.com/emerging-talent",
+    ];
+    var EASTER_EGG_TEXT = "builders.ramp.com/emerging-talent";
+    var EASTER_EGG_URL = "https://builders.ramp.com/emerging-talent";
+
+    var FONT = "400 " + FONT_SIZE + "px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace";
+    var FLOAT_FONT = "300 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+    var cols = 0, rows = 0, grid = [], floaters = [], cardRects = [];
+    var mouse = { x: -9999, y: -9999 };
+    var lastTime = 0, nextFloat = 1 + Math.random() * 2;
+    var phraseData = [];
+
+    function randChar() { return CHAR_POOL[Math.floor(Math.random() * CHAR_POOL.length)]; }
+
+    function distToRect(px, py, rect) {
+      var dx = Math.max(rect.x - px, 0, px - (rect.x + rect.w));
+      var dy = Math.max(rect.y - py, 0, py - (rect.y + rect.h));
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function buildPhraseData() {
+      ctx.font = FLOAT_FONT;
+      phraseData = PHRASES.map(function(text) {
+        var widths = text.split("").map(function(ch) { return ctx.measureText(ch).width || 6; });
+        return { text: text, widths: widths, totalWidth: widths.reduce(function(a,b){return a+b;}, 0) };
+      });
+    }
+
+    function resize() {
+      var dpr = window.devicePixelRatio || 1;
+      var W = window.innerWidth, H = window.innerHeight;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + "px"; canvas.style.height = H + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      overlay.width = W * dpr; overlay.height = H * dpr;
+      overlay.style.width = W + "px"; overlay.style.height = H + "px";
+      cols = Math.ceil(W / COL_WIDTH) + 2;
+      rows = Math.ceil(H / ROW_HEIGHT) + 24;
+      grid = [];
+      for (var ci = 0; ci < cols; ci++) {
+        var chars = [];
+        for (var ri = 0; ri < rows; ri++) {
+          chars.push({
+            char: randChar(),
+            brightness: 0.03 + Math.random() * 0.12,
+            colorIdx: Math.floor(Math.random() * COLOURS_LIGHT.length),
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+        grid.push({
+          speed: 10 + Math.sin(ci * 0.37) * 5 + Math.random() * 8,
+          offset: Math.random() * rows * ROW_HEIGHT,
+          chars: chars
+        });
+      }
+      buildPhraseData();
+    }
+
+    function updateCardRects() {
+      cardRects = Array.from(document.querySelectorAll("[data-bg-card]")).map(function(el) {
+        var r = el.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height };
+      });
+    }
+
+    function draw(now) {
+      requestAnimationFrame(draw);
+      var dt = lastTime ? Math.min((now - lastTime) / 1000, 0.1) : 0;
+      lastTime = now;
+      var W = window.innerWidth, H = window.innerHeight;
+      var T = now * 0.001;
+      var isDark = html.classList.contains("dark");
+      var fadeEl = document.getElementById("top-fade");
+      if (fadeEl) fadeEl.style.background = isDark
+        ? "linear-gradient(to bottom, #000 0%, transparent 100%)"
+        : "linear-gradient(to bottom, #f7f7f5 0%, transparent 100%)";
+      var COLOURS = isDark ? COLOURS_DARK : COLOURS_LIGHT;
+      var bgAlphaMax = isDark ? 0.6 : 0.12;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.font = FONT;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+
+      var totalH = rows * ROW_HEIGHT;
+
+      for (var c = 0; c < cols; c++) {
+        var col = grid[c];
+        col.offset = (col.offset + col.speed * dt) % totalH;
+        var cx = c * COL_WIDTH;
+        if (cx > W + COL_WIDTH) continue;
+
+        for (var r = 0; r < rows; r++) {
+          var cy = r * ROW_HEIGHT - col.offset;
+          if (cy < -ROW_HEIGHT) cy += totalH;
+          if (cy > H + ROW_HEIGHT) continue;
+
+          var cell = col.chars[r];
+          var cellX = cx + COL_WIDTH / 2;
+          var cellY = cy + ROW_HEIGHT / 2;
+
+          var cardFade = 1;
+          for (var k = 0; k < cardRects.length; k++) {
+            var d = distToRect(cellX, cellY, cardRects[k]);
+            if (d < CARD_RADIUS) cardFade = Math.min(cardFade, d / CARD_RADIUS);
+          }
+          if (cardFade < 0.01) continue;
+
+          var dx = cellX - mouse.x, dy = cellY - mouse.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          var repulse = 0, rx = 0, ry = 0;
+          if (dist < MOUSE_RADIUS && dist > 0) {
+            repulse = Math.pow(1 - dist / MOUSE_RADIUS, 1.8);
+            rx = (dx / dist) * repulse * 12;
+            ry = (dy / dist) * repulse * 12;
+          }
+
+          var pulse = Math.sin(T * 1.2 + cell.phase) * 0.02;
+          var alpha = Math.min((cell.brightness + repulse * 0.4 + pulse) * cardFade * (isDark ? 4 : 1), bgAlphaMax);
+          if (alpha < 0.005) continue;
+
+          var col_ = COLOURS[cell.colorIdx];
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = "rgb(" + col_[0] + "," + col_[1] + "," + col_[2] + ")";
+          ctx.fillText(cell.char, cx + rx, cy + ry);
+          if (Math.random() < 2e-4) cell.char = randChar();
+        }
+      }
+
+      // floating phrases
+      nextFloat -= dt;
+      if (nextFloat <= 0 && floaters.length < 5) {
+        var spawnEgg = Math.random() < 0.25 && !floaters.some(function(f) { return f.text === EASTER_EGG_TEXT; });
+        var pd;
+        if (spawnEgg) {
+          for (var i = 0; i < phraseData.length; i++) {
+            if (phraseData[i].text === EASTER_EGG_TEXT) { pd = phraseData[i]; break; }
+          }
+        } else {
+          var nonEgg = phraseData.filter(function(p) { return p.text !== EASTER_EGG_TEXT; });
+          pd = nonEgg[Math.floor(Math.random() * nonEgg.length)];
+        }
+        floaters.push({
+          text: pd.text, widths: pd.widths, totalWidth: pd.totalWidth,
+          x: Math.random() * Math.max(10, W - pd.totalWidth),
+          y: H + 20,
+          speed: spawnEgg ? 28 : 35 + Math.random() * 20,
+          colorIdx: Math.floor(Math.random() * COLOURS.length)
+        });
+        nextFloat = 4 + Math.random() * 6;
+      }
+
+      ctx.font = FLOAT_FONT;
+      floaters = floaters.filter(function(fl) {
+        fl.y -= fl.speed * dt;
+        if (fl.y < -30) return false;
+
+        var isEgg = fl.text === EASTER_EGG_TEXT;
+        var eggHovered = isEgg && mouse.x >= fl.x && mouse.x <= fl.x + fl.totalWidth
+                      && mouse.y >= fl.y - 4 && mouse.y <= fl.y + 18;
+
+        var edgeFadeTop = Math.min((H - fl.y) / (H * 0.12), 1);
+        var edgeFadeBot = Math.min((fl.y + 30) / (H * 0.12), 1);
+        var baseAlpha = isEgg
+          ? (isDark ? 0.28 : 0.13) * edgeFadeTop * edgeFadeBot
+          : (isDark ? 0.18 : 0.07) * edgeFadeTop * edgeFadeBot;
+
+        var x = fl.x;
+        var COLOURS_NOW = isDark ? COLOURS_DARK : COLOURS_LIGHT;
+
+        for (var i = 0; i < fl.text.length; i++) {
+          var ch = fl.text[i];
+          var cw = fl.widths[i];
+          if (ch === " ") { x += cw; continue; }
+
+          var charCx = x + cw / 2;
+          var cardFade2 = 1;
+          for (var k = 0; k < cardRects.length; k++) {
+            var d2 = distToRect(charCx, fl.y, cardRects[k]);
+            if (d2 < CARD_RADIUS) cardFade2 = Math.min(cardFade2, d2 / CARD_RADIUS);
+          }
+
+          var ddx = charCx - mouse.x, ddy = fl.y - mouse.y;
+          var ddist = Math.sqrt(ddx * ddx + ddy * ddy);
+          var mouseLift = !isEgg && ddist < MOUSE_RADIUS ? Math.pow(1 - ddist / MOUSE_RADIUS, 1.8) * 0.2 : 0;
+          var hoverBoost = eggHovered ? 0.08 : 0;
+          var alpha2 = Math.min((baseAlpha + mouseLift + hoverBoost) * cardFade2, isEgg ? 0.45 : 0.35);
+
+          if (alpha2 > 0.005) {
+            var c_ = isEgg ? (isDark ? [232,255,71] : [80,80,80]) : COLOURS_NOW[fl.colorIdx];
+            if (isEgg) {
+              ctx.save();
+              ctx.shadowColor = isDark ? "rgba(232,255,71,0.35)" : "rgba(0,0,0,0.18)";
+              ctx.shadowBlur = eggHovered ? 8 : 4;
+            }
+            ctx.globalAlpha = alpha2;
+            ctx.fillStyle = "rgb(" + c_[0] + "," + c_[1] + "," + c_[2] + ")";
+            ctx.font = isEgg ? "300 13px monospace" : FLOAT_FONT;
+            ctx.fillText(ch, x, fl.y);
+            if (isEgg) ctx.restore();
+          }
+          x += cw;
+        }
+        if (isEgg) ctx.font = FLOAT_FONT;
+        return true;
+      });
+
+      ctx.globalAlpha = 1;
+    }
+
+    var ro = new ResizeObserver(updateCardRects);
+    ro.observe(document.body);
+    window.addEventListener("scroll", updateCardRects, { passive: true });
+    var overlay = document.getElementById("lb-egg-overlay");
+
+    window.addEventListener("mousemove", function(e) {
+      mouse.x = e.clientX; mouse.y = e.clientY;
+      var onEgg = floaters.some(function(fl) {
+        return fl.text === EASTER_EGG_TEXT
+          && e.clientX >= fl.x && e.clientX <= fl.x + fl.totalWidth
+          && e.clientY >= fl.y - 4 && e.clientY <= fl.y + 18;
+      });
+      overlay.style.pointerEvents = onEgg ? "auto" : "none";
+      overlay.style.cursor = onEgg ? "pointer" : "default";
+    });
+    overlay.addEventListener("click", function(e) {
+      floaters.forEach(function(fl) {
+        if (fl.text === EASTER_EGG_TEXT
+          && e.clientX >= fl.x && e.clientX <= fl.x + fl.totalWidth
+          && e.clientY >= fl.y - 4 && e.clientY <= fl.y + 18) {
+          window.open(EASTER_EGG_URL, "_blank");
+        }
+      });
+    });
+    window.addEventListener("resize", resize);
+    resize();
+    updateCardRects();
+    requestAnimationFrame(draw);
+  })();
+</script>
+
+</body>
+</html>

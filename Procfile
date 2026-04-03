@@ -1,0 +1,1 @@
+migration: python migrate.py
