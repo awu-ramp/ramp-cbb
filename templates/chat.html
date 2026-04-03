@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/static/pixel.png" />
@@ -726,8 +726,7 @@
     p.classList.toggle("active", p.dataset.model === selectedModel);
   });
 
-  // dark mode always on
-  document.documentElement.classList.add("dark");
+  // dark mode always on (set on html element)
 
   // ── state ───────────────────────────────────────────────────────────
   var apiKey = localStorage.getItem("tc_api_key") || "";
