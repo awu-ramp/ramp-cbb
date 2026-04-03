@@ -604,23 +604,27 @@
 
     .msg-actions {
       display: flex;
-      gap: 6px;
-      margin-top: 4px;
+      gap: 4px;
+      margin-top: 6px;
       opacity: 0;
       transition: opacity 0.15s;
+      align-items: center;
     }
     .msg:hover .msg-actions { opacity: 1; }
     .msg-action-btn {
-      font-size: 11px;
-      color: var(--text-faint);
       background: none;
-      border: none;
+      border: 1px solid var(--border);
       cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 4px;
-      transition: background 0.1s, color 0.1s;
+      padding: 5px;
+      border-radius: 6px;
+      transition: background 0.1s, border-color 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
     }
-    .msg-action-btn:hover { background: var(--border); color: var(--text-muted); }
+    .msg-action-btn:hover { background: var(--border); border-color: var(--text-faint); }
+    .msg-action-btn svg { width: 13px; height: 13px; display: block; }
 
     /* ── streaming cursor ── */
     .stream-cursor::after {
@@ -1008,13 +1012,76 @@
   });
 
   // ── send ─────────────────────────────────────────────────────────────
-  function sendMessage() {
+  function sendMessage(isRetry) {
     var input = document.getElementById("input");
     var text = input.value.trim();
-    if ((!text && pendingFiles.length === 0) || isLoading) return;
+    if (!isRetry && (!text && pendingFiles.length === 0) || isLoading) return;
+    if (isRetry && chatHistory.length === 0) return;
 
     var emptyState = document.getElementById("empty-state");
     if (emptyState) emptyState.remove();
+
+    if (isRetry) {
+      // just re-run with existing history
+      setLoadingState(true);
+      abortController = new AbortController();
+      var msgs = document.getElementById("messages");
+      var wrap = document.createElement("div");
+      wrap.className = "msg assistant";
+      var avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = "R";
+      var bubble = document.createElement("div");
+      bubble.className = "bubble md stream-cursor";
+      wrap.appendChild(avatar);
+      wrap.appendChild(bubble);
+      msgs.appendChild(wrap);
+      msgs.scrollTop = msgs.scrollHeight;
+      var fullText = "";
+      fetch("/chat-stream", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": apiKey },
+        body: JSON.stringify({ messages: chatHistory, model: selectedModel }),
+        signal: abortController.signal
+      }).then(function(res) {
+        if (!res.ok) { wrap.remove(); setLoadingState(false); return; }
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        function pump() {
+          return reader.read().then(function(result) {
+            if (result.done) return;
+            var chunk = decoder.decode(result.value, { stream: true });
+            chunk.split("
+").forEach(function(line) {
+              if (!line.startsWith("data: ")) return;
+              try {
+                var evt = JSON.parse(line.slice(6).trim());
+                if (evt.type === "content_block_delta" && evt.delta && evt.delta.type === "text_delta") {
+                  fullText += evt.delta.text;
+                  bubble.innerHTML = renderMarkdown(fullText);
+                  bubble.classList.add("stream-cursor");
+                  msgs.scrollTop = msgs.scrollHeight;
+                }
+              } catch(e) {}
+            });
+            return pump();
+          });
+        }
+        return pump();
+      }).catch(function() {}).finally(function() {
+        bubble.classList.remove("stream-cursor");
+        var actions = document.createElement("div");
+        actions.className = "msg-actions";
+        actions.innerHTML = '<button class="msg-action-btn copy-btn-action" title="copy" onclick="copyMsgText(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>'
+          + '<button class="msg-action-btn" title="retry" onclick="retryMessage(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg></button>';
+        actions._rawText = fullText;
+        wrap.appendChild(actions);
+        if (fullText) { chatHistory.push({ role: "assistant", content: fullText }); saveHistory(); updateTokenCounter(); }
+        setLoadingState(false);
+        abortController = null;
+      });
+      return;
+    }
 
     var userContent;
     if (pendingFiles.length > 0) {
@@ -1122,7 +1189,12 @@
       bubble.classList.remove("stream-cursor");
       var actions = document.createElement("div");
       actions.className = "msg-actions";
-      actions.innerHTML = '<button class="msg-action-btn" onclick="copyMsgText(this)">copy</button>';
+      actions.innerHTML = '<button class="msg-action-btn copy-btn-action" title="copy" onclick="copyMsgText(this)">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+        + '</button>'
+        + '<button class="msg-action-btn" title="retry" onclick="retryMessage(this)">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>'
+        + '</button>';
       actions._rawText = fullText;
       wrap.appendChild(actions);
       if (fullText) {
@@ -1139,9 +1211,27 @@
   function copyMsgText(btn) {
     var text = btn.parentElement._rawText || "";
     navigator.clipboard.writeText(text).then(function() {
-      btn.textContent = "copied!";
-      setTimeout(function() { btn.textContent = "copy"; }, 1500);
+      btn.style.color = "#e8ff47";
+      btn.style.borderColor = "#e8ff47";
+      setTimeout(function() {
+        btn.style.color = "";
+        btn.style.borderColor = "";
+      }, 1200);
     });
+  }
+
+  function retryMessage(btn) {
+    if (isLoading) return;
+    // Remove last assistant message from history and UI
+    if (chatHistory.length >= 2 && chatHistory[chatHistory.length - 1].role === "assistant") {
+      chatHistory.pop();
+      saveHistory();
+    }
+    // Remove the message bubble from UI
+    var msgEl = btn.closest(".msg");
+    if (msgEl) msgEl.remove();
+    // Resend
+    sendMessage(true);
   }
 
   // ── append message ───────────────────────────────────────────────────
@@ -1162,7 +1252,9 @@
       bubble.innerHTML = renderMarkdown(text);
       var actions = document.createElement("div");
       actions.className = "msg-actions";
-      actions.innerHTML = '<button class="msg-action-btn" onclick="copyMsgText(this)">copy</button>';
+      actions.innerHTML = '<button class="msg-action-btn copy-btn-action" title="copy" onclick="copyMsgText(this)">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+        + '</button>';
       actions._rawText = text;
       wrap.appendChild(avatar);
       wrap.appendChild(bubble);
